@@ -1,4 +1,3 @@
-// src/services/volunteersService.js
 import axios from 'axios';
 import { apiBaseUrl } from '../utils/config';
 
@@ -13,6 +12,7 @@ export const fetchVolunteers = async (filters) => {
     throw error;
   }
 };
+
 export const addVolunteer = async (volunteerData) => {
   const response = await axios.post(`${apiBaseUrl}/api/volunteers`, volunteerData);
   return response.data;
@@ -38,3 +38,14 @@ export const fetchVolunteerFields = async () => {
   }
 };
 
+// הוספת הפונקציה ליצירת מתנדב חדש
+export const createVolunteer = async (volunteerData) => {
+  const response = await axios.post(`${apiBaseUrl}/api/volunteers`, volunteerData);
+  return response.data;
+};
+
+// הוספת הפונקציה לשליפת מתנדב לפי מזהה
+export const getVolunteer = async (id) => {
+  const response = await axios.get(`${apiBaseUrl}/api/volunteers/${id}`);
+  return response.data;
+};

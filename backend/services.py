@@ -9,17 +9,17 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 def get_all_volunteers(name=None, address=None, fields=None):
     query = Volunteer.query
 
+    # סינון לפי שם פרטי ושם משפחה
     if name:
         query = query.filter(or_(Volunteer.first_name.ilike(f'%{name}%'), Volunteer.last_name.ilike(f'%{name}%')))
 
-    if address:
-        query = query.filter(Volunteer.address.ilike(f'%{address}%'))
-
+    # סינון לפי תחומי התנדבות
     if fields and len(fields) > 0:
         query = query.filter(Volunteer.volunteer_field.op('regexp')('|'.join(fields)))
 
     return [{'id': v.id, 'first_name': v.first_name, 'last_name': v.last_name, 'address': v.address,
              'volunteer_field': v.volunteer_field} for v in query.all()]
+
 
 # Function to add a new volunteer
 def add_volunteer(data):

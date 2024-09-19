@@ -1,126 +1,164 @@
-from models import Volunteer, Need, db
+from models import db, Volunteer, Need  # ייבוא db מהמודלים
+import os
+from sqlalchemy import or_
 import requests
+from math import radians, cos, sin, sqrt, atan2
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
-# פונקציות לניהול מתנדבים
-def get_all_volunteers():
-    volunteers = Volunteer.query.order_by(Volunteer.first_name, Volunteer.last_name).all()
-    return [{'id': v.id, 'first_name': v.first_name, 'last_name': v.last_name, 'address': v.address, 'volunteer_field': v.volunteer_field} for v in volunteers]
+# Function to get all volunteers with optional filters
+def get_all_volunteers(name=None, address=None, fields=None):
+    query = Volunteer.query
 
+    if name:
+        query = query.filter(or_(Volunteer.first_name.ilike(f'%{name}%'), Volunteer.last_name.ilike(f'%{name}%')))
 
+    if address:
+        query = query.filter(Volunteer.address.ilike(f'%{address}%'))
 
-# services.py (or a utility file if needed)
-import requests
+    if fields and len(fields) > 0:
+        query = query.filter(Volunteer.volunteer_field.op('regexp')('|'.join(fields)))
 
-def get_coordinates(address):
-    try:
-        api_key = 'AIzaSyBf5aQhKpN32oamljuCiFl3tl8fbcHjA8U'  #
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
-        response = requests.get(url)
-        data = response.json()
+    return [{'id': v.id, 'first_name': v.first_name, 'last_name': v.last_name, 'address': v.address,
+             'volunteer_field': v.volunteer_field} for v in query.all()]
 
-        if data['status'] == 'OK':
-            location = data['results'][0]['geometry']['location']
-            return location['lat'], location['lng']
-        else:
-            print(f"Error fetching coordinates for address {address}: {data['status']}")
-            return None, None
-    except Exception as e:
-        print(f"Error during geocoding: {e}")
-        return None, None
-
-def calculate_distance(origin, destination):
-    api_key = "AIzaSyBf5aQhKpN32oamljuCiFl3tl8fbcHjA8U"
-    url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        if data['rows'][0]['elements'][0]['status'] == 'OK':
-            distance = data['rows'][0]['elements'][0]['distance']['value']  # המרחק במטרים
-            return distance
-    return None
-
+# Function to add a new volunteer
 def add_volunteer(data):
-    # Convert volunteer_field list to a comma-separated string
-    volunteer_field_str = ', '.join(data['volunteer_field']) if isinstance(data['volunteer_field'], list) else data[
-        'volunteer_field']
-
-    # Create new volunteer object with the processed volunteer_field
     new_volunteer = Volunteer(
         first_name=data['first_name'],
         last_name=data['last_name'],
         address=data['address'],
-        volunteer_field=volunteer_field_str
+        volunteer_field=','.join(data['volunteer_field'])
     )
+    lat, lng = get_coordinates(data['address'])
+    new_volunteer.latitude = lat
+    new_volunteer.longitude = lng
 
-    # Add and commit the new volunteer to the database
     db.session.add(new_volunteer)
     db.session.commit()
+    return {'id': new_volunteer.id, 'first_name': new_volunteer.first_name, 'last_name': new_volunteer.last_name,
+            'address': new_volunteer.address, 'volunteer_field': new_volunteer.volunteer_field}
 
-
+# Function to update a volunteer
 def update_volunteer(id, data):
-    # Find the existing volunteer by ID
     volunteer = Volunteer.query.get(id)
 
-    if volunteer:
-        # Convert volunteer_field list to a comma-separated string
-        volunteer_field_str = ', '.join(data['volunteer_field']) if isinstance(data['volunteer_field'], list) else data[
-            'volunteer_field']
+    if not volunteer:
+        return None
 
-        # Update the volunteer details
-        volunteer.first_name = data['first_name']
-        volunteer.last_name = data['last_name']
-        volunteer.address = data['address']
-        volunteer.volunteer_field = volunteer_field_str
+    volunteer.first_name = data.get('first_name', volunteer.first_name)
+    volunteer.last_name = data.get('last_name', volunteer.last_name)
+    volunteer.address = data.get('address', volunteer.address)
+    volunteer.volunteer_field = ','.join(data.get('volunteer_field', volunteer.volunteer_field.split(',')))
 
-        # Commit the changes to the database
-        db.session.commit()
-    else:
-        raise ValueError(f"Volunteer with id {id} not found")
+    # Update coordinates if address has changed
+    if 'address' in data:
+        lat, lng = get_coordinates(data['address'])
+        volunteer.latitude = lat
+        volunteer.longitude = lng
 
+    db.session.commit()
+    return {'id': volunteer.id, 'first_name': volunteer.first_name, 'last_name': volunteer.last_name,
+            'address': volunteer.address, 'volunteer_field': volunteer.volunteer_field}
 
+# Function to delete a volunteer
 def delete_volunteer(id):
     volunteer = Volunteer.query.get(id)
+
     if volunteer:
         db.session.delete(volunteer)
         db.session.commit()
 
-# פונקציות לניהול צרכים של נזקקים
-# בקובץ services.py
+# Function to get volunteer by id
+def get_volunteer(id):
+    volunteer = Volunteer.query.get(id)
+    if volunteer:
+        return {'id': volunteer.id, 'first_name': volunteer.first_name, 'last_name': volunteer.last_name,
+                'address': volunteer.address, 'volunteer_field': volunteer.volunteer_field}
+    return None
+
+# Function to calculate distance between two points (latitude, longitude)
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371000  # Radius of the Earth in meters
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lat2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    distance = R * c
+    return distance
+
+# Function to get the coordinates (latitude, longitude) for an address using Google Maps API
+def get_coordinates(address):
+    api_key = get_google_api_key()  # Use the function to get the Google API key
+    base_url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}'
+    response = requests.get(base_url)
+    if response.status_code == 200:
+        data = response.json()
+        if data['results']:
+            location = data['results'][0]['geometry']['location']
+            return location['lat'], location['lng']
+    return None, None
+
+# Function to get all distinct volunteer fields
+def get_volunteer_fields():
+    all_volunteers = Volunteer.query.with_entities(Volunteer.volunteer_field).all()
+    unique_fields = set()
+    for volunteer in all_volunteers:
+        fields = volunteer.volunteer_field.split(',')
+        unique_fields.update(fields)
+    return list(unique_fields)
+
+# Function to get all needs
 def get_all_needs():
     needs = Need.query.all()
-    # עדכון השדות בהתאם לשמות הקיימים בטבלה
-    return [{
-        'id': n.id,
-        'full_name': n.full_name,
-        'address': n.address,
-        'apartment_count': n.apartment_count,
-        'phone': n.phone,
-        'whatsapp_group': n.whatsapp_group,
-        'special_residents': n.special_residents,
-        'additional_needs': n.additional_needs,
-        'event_attendance': n.event_attendance
-    } for n in needs]
+    return [{'id': n.id, 'description': n.description, 'address': n.address, 'type': n.need_type} for n in needs]
 
-
+# Function to add a new need
 def add_need(data):
     new_need = Need(
         description=data['description'],
         address=data['address'],
         need_type=data['need_type']
     )
+    lat, lng = get_coordinates(data['address'])
+    new_need.latitude = lat
+    new_need.longitude = lng
+
     db.session.add(new_need)
     db.session.commit()
+    return {'id': new_need.id, 'description': new_need.description, 'address': new_need.address,
+            'need_type': new_need.need_type}
 
+# Function to update an existing need
 def update_need(id, data):
     need = Need.query.get(id)
-    if need:
-        need.description = data.get('description', need.description)
-        need.address = data.get('address', need.address)
-        need.need_type = data.get('need_type', need.need_type)
-        db.session.commit()
 
+    if not need:
+        return None
+
+    need.description = data.get('description', need.description)
+    need.address = data.get('address', need.address)
+    need.need_type = data.get('need_type', need.need_type)
+
+    # Update coordinates if address has changed
+    if 'address' in data:
+        lat, lng = get_coordinates(data['address'])
+        need.latitude = lat
+        need.longitude = lng
+
+    db.session.commit()
+    return {'id': need.id, 'description': need.description, 'address': need.address, 'need_type': need.need_type}
+
+# Function to delete a need
 def delete_need(id):
     need = Need.query.get(id)
+
     if need:
         db.session.delete(need)
         db.session.commit()
+
+# Function to get a need by id
+def get_need(id):
+    need = Need.query.get(id)
+    if need:
+        return {'id': need.id, 'description': need.description, 'address': need.address, 'need_type': need.need_type}
+    return None

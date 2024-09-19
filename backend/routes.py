@@ -1,99 +1,98 @@
-from flask import jsonify, request
-
-from models import Volunteer, Need, db
+from flask import request, jsonify
+from models import Volunteer, Need
 from services import (
     get_all_volunteers, add_volunteer, update_volunteer, delete_volunteer,
-    get_all_needs, add_need, update_need, delete_need, calculate_distance,  get_coordinates
+    get_volunteer, calculate_distance, get_coordinates, get_volunteer_fields,
+    get_all_needs, add_need, update_need, delete_need, get_need
 )
 
+
 def init_routes(app):
-    # ניהול מתנדבים
+    """Initialize all routes for the Flask app."""
+
+    # Routes for volunteers
     @app.route('/api/volunteers', methods=['GET'])
     def get_volunteers():
-        resp = jsonify(get_all_volunteers())
-        print(resp)
-        return resp
+        """Get all volunteers or apply filtering."""
+        name_filter = request.args.get('name', None)
+        address_filter = request.args.get('address', None)
+        fields_filter = request.args.getlist('fields')  # Expecting multiple fields
 
-    @app.route('/api/volunteers', methods=['GET'])
-    def get_filtered_volunteers():
-        fields = request.args.getlist('fields')
+        volunteers = get_all_volunteers(name=name_filter, address=address_filter, fields=fields_filter)
+        return jsonify(volunteers), 200
 
-        if fields:
-            volunteers = Volunteer.query.filter(Volunteer.volunteer_field.in_(fields)).all()
-        else:
-            volunteers = Volunteer.query.all()
-
-        return jsonify([{
-            'id': v.id,
-            'first_name': v.first_name,
-            'last_name': v.last_name,
-            'address': v.address,
-            'volunteer_field': v.volunteer_field
-        } for v in volunteers])
-
-    @app.route('/volunteers/filter', methods=['GET'])
-    def filter_volunteers():
-        user_address = request.args.get('address')
-        max_distance = int(request.args.get('max_distance', 5000))
-
-        user_lat, user_lng = get_coordinates(user_address)
-        if not user_lat or not user_lng:
-            return jsonify({'error': 'Invalid address'}), 400
-
-        volunteers = Volunteer.query.all()
-        filtered_volunteers = []
-
-        for volunteer in volunteers:
-            vol_lat, vol_lng = get_coordinates(volunteer.address)
-            if vol_lat and vol_lng:
-                distance = calculate_distance(f"{user_lat},{user_lng}", f"{vol_lat},{vol_lng}")
-                if distance is not None and distance <= max_distance:
-                    filtered_volunteers.append(volunteer)
-
-        return jsonify([{
-            'id': v.id,
-            'first_name': v.first_name,
-            'last_name': v.last_name,
-            'address': v.address,
-            'volunteer_field': v.volunteer_field
-        } for v in filtered_volunteers])
-
+    @app.route('/api/volunteers/fields', methods=['GET'])
+    def get_fields():
+        """Return the distinct list of volunteer fields for the dropdown."""
+        fields = get_volunteer_fields()
+        return jsonify(fields), 200
 
     @app.route('/api/volunteers', methods=['POST'])
-    def create_volunteer():
-        data = request.get_json()
-        add_volunteer(data)
-        return jsonify({'message': 'Volunteer added successfully!'}), 201
+    def add_new_volunteer():
+        """Add a new volunteer."""
+        data = request.json
+        volunteer = add_volunteer(data)
+        return jsonify(volunteer), 201
 
     @app.route('/api/volunteers/<int:id>', methods=['PUT'])
-    def edit_volunteer(id):
-        data = request.get_json()
-        update_volunteer(id, data)
-        return jsonify({'message': 'Volunteer updated successfully!'})
+    def update_existing_volunteer(id):
+        """Update a volunteer."""
+        data = request.json
+        updated_volunteer = update_volunteer(id, data)
+        return jsonify(updated_volunteer), 200
 
     @app.route('/api/volunteers/<int:id>', methods=['DELETE'])
     def remove_volunteer(id):
+        """Delete a volunteer."""
         delete_volunteer(id)
-        return jsonify({'message': 'Volunteer deleted successfully!'})
+        return '', 204
 
-    # ניהול צרכים של נזקקים
+    # Routes for needs
     @app.route('/api/needs', methods=['GET'])
     def get_needs():
-        return jsonify(get_all_needs())
+        """Get all needs."""
+        needs = get_all_needs()
+        return jsonify(needs), 200
 
     @app.route('/api/needs', methods=['POST'])
-    def create_need():
-        data = request.get_json()
-        add_need(data)
-        return jsonify({'message': 'Need added successfully!'}), 201
+    def add_new_need():
+        """Add a new need."""
+        data = request.json
+        need = add_need(data)
+        return jsonify(need), 201
 
     @app.route('/api/needs/<int:id>', methods=['PUT'])
-    def edit_need(id):
-        data = request.get_json()
-        update_need(id, data)
-        return jsonify({'message': 'Need updated successfully!'})
+    def update_existing_need(id):
+        """Update a need."""
+        data = request.json
+        updated_need = update_need(id, data)
+        return jsonify(updated_need), 200
 
     @app.route('/api/needs/<int:id>', methods=['DELETE'])
     def remove_need(id):
+        """Delete a need."""
         delete_need(id)
-        return jsonify({'message': 'Need deleted successfully!'})
+        return '', 204
+
+    # Route for calculating distance between coordinates
+    @app.route('/api/distance', methods=['GET'])
+    def get_distance():
+        """Calculate distance between two coordinates."""
+        lat1 = float(request.args.get('lat1'))
+        lon1 = float(request.args.get('lon1'))
+        lat2 = float(request.args.get('lat2'))
+        lon2 = float(request.args.get('lon2'))
+
+        distance = calculate_distance(lat1, lon1, lat2, lon2)
+        return jsonify({'distance': distance}), 200
+
+    # Route for fetching coordinates for a given address
+    @app.route('/api/coordinates', methods=['GET'])
+    def get_address_coordinates():
+        """Get the latitude and longitude of a given address."""
+        address = request.args.get('address')
+        lat, lng = get_coordinates(address)
+        if lat and lng:
+            return jsonify({'latitude': lat, 'longitude': lng}), 200
+        else:
+            return jsonify({'error': 'Address not found'}), 404

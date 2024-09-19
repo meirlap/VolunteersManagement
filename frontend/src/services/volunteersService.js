@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { apiBaseUrl } from '../utils/config';
 
-const API_URL = '/api/volunteers';
+const API_URL = `${apiBaseUrl}/api/volunteers`;
 
 export const fetchVolunteers = async (filters) => {
   try {
@@ -28,4 +28,13 @@ export const deleteVolunteer = async (id) => {
   return response.data;
 };
 
+export const fetchVolunteerFields = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/fields`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching volunteer fields:', error);
+    throw error;
+  }
+};
 

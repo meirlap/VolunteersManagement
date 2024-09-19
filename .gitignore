@@ -6,6 +6,7 @@
 .pnp.js
 
 # Python dependencies
+.env
 .venv/
 venv/
 env/

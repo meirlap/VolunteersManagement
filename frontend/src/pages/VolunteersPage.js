@@ -1,81 +1,95 @@
 // VolunteersPage.js
 import React, { useState, useEffect } from 'react';
-import { fetchVolunteers } from '../services/volunteersService';
-import { TextField, Button, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { fetchVolunteers, fetchVolunteerFields } from '../services/volunteersService';
+import VolunteersTable from '../components/VolunteersTable';
+import { Box, TextField, Button, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
 
 const VolunteersPage = () => {
   const [volunteers, setVolunteers] = useState([]);
-  const [filters, setFilters] = useState({
-    name: '',
-    fields: [],
-    address: '',
-    maxDistance: 5000, // Default max distance (5 km)
-  });
+  const [fields, setFields] = useState([]);
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [filters, setFilters] = useState({ name: '', address: '', maxDistance: '', fields: [] });
 
   useEffect(() => {
-    const fetchData = async () => {
+    // קריאת רשימת התחומים מהשרת
+    const loadFields = async () => {
       try {
-        const data = await fetchVolunteers(filters);
-        setVolunteers(data);
+        const fields = await fetchVolunteerFields();
+        setFields(fields);
       } catch (error) {
-        console.error('Error fetching filtered volunteers:', error);
+        console.error('Failed to load volunteer fields:', error);
       }
     };
 
-    fetchData();
+    loadFields();
+  }, []);
+
+  useEffect(() => {
+    // קריאה לקבלת רשימת המתנדבים מהשרת
+    const loadVolunteers = async () => {
+      try {
+        const volunteers = await fetchVolunteers(filters);
+        setVolunteers(volunteers);
+      } catch (error) {
+        console.error('Failed to load volunteers:', error);
+      }
+    };
+
+    loadVolunteers();
   }, [filters]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
-    setFilters({ ...filters, [name]: value });
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFieldChange = (field) => {
+    setSelectedFields((prev) =>
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
+    );
+  };
+
+  const applyFilters = () => {
+    setFilters((prev) => ({ ...prev, fields: selectedFields }));
   };
 
   return (
-    <div>
-      <h2>Volunteer List</h2>
+    <Box>
+      <h1>Volunteer List</h1>
       <TextField
         label="Filter by Name"
-        variant="outlined"
         name="name"
-        value={filters.name}
         onChange={handleFilterChange}
+        variant="outlined"
+        style={{ marginRight: '10px' }}
       />
-      <FormControl>
-        <InputLabel>Max Distance (meters)</InputLabel>
-        <Select
-          name="maxDistance"
-          value={filters.maxDistance}
-          onChange={handleFilterChange}
-        >
-          {[150, 300, 450, 600].map((distance) => (
-            <MenuItem key={distance} value={distance * 100}>
-              {distance} meters
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <Button variant="contained" onClick={() => setFilters(filters)}>Apply Filters</Button>
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Address</th>
-            <th>Field of Volunteering</th>
-          </tr>
-        </thead>
-        <tbody>
-          {volunteers.map((volunteer) => (
-            <tr key={volunteer.id}>
-              <td>{volunteer.first_name}</td>
-              <td>{volunteer.last_name}</td>
-              <td>{volunteer.address}</td>
-              <td>{volunteer.volunteer_field}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <TextField
+        label="Address"
+        name="address"
+        onChange={handleFilterChange}
+        variant="outlined"
+        style={{ marginRight: '10px' }}
+      />
+      {/* דרופדאון לבחירת תחומי ההתנדבות */}
+      <FormGroup row>
+        {fields.map((field, index) => (
+          <FormControlLabel
+            key={index}
+            control={
+              <Checkbox
+                checked={selectedFields.includes(field)}
+                onChange={() => handleFieldChange(field)}
+              />
+            }
+            label={field}
+          />
+        ))}
+      </FormGroup>
+      <Button variant="contained" onClick={applyFilters}>
+        Apply Filters
+      </Button>
+      <VolunteersTable volunteers={volunteers} />
+    </Box>
   );
 };
 

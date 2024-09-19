@@ -61,6 +61,7 @@ def import_volunteers():
         except Exception as e:
             print(f"Commit failed for volunteers: {e}")
             db.session.rollback()
+
 def import_needs():
     with app.app_context():
         for index, row in needs_df.iterrows():
@@ -90,4 +91,3 @@ def import_needs():
 # קריאה לפונקציות להוספת הנתונים
 import_volunteers()
 import_needs()
-

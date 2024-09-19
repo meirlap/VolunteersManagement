@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography } from '@mui/material';
-import { getVolunteers } from '../services/volunteersService';
+import { fetchVolunteers } from '../services/volunteersService';
 
 const VolunteersTable = () => {
   const [volunteers, setVolunteers] = useState([]);
 
   useEffect(() => {
     // Fetch volunteers from the API
-    const fetchVolunteers = async () => {
+    const getVolunteers = async () => {
       try {
-        const data = await getVolunteers();
+        const data = await fetchVolunteers();
         setVolunteers(data);
       } catch (error) {
         console.error('Error fetching volunteers:', error);
       }
     };
 
-    fetchVolunteers();
+    getVolunteers();
   }, []);
 
   return (

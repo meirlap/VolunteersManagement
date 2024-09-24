@@ -12,7 +12,12 @@ export const fetchVolunteers = async (filters) => {
     throw error;
   }
 };
-
+export const fetchVolunteersByAddressAndDistance = async (address, maxDistance) => {
+  const response = await axios.get(`${apiBaseUrl}/api/volunteers_by_address_and_distance`, {
+    params: { address, maxDistance }
+  });
+  return response.data;
+};
 export const addVolunteer = async (volunteerData) => {
   const response = await axios.post(`${apiBaseUrl}/api/volunteers`, volunteerData);
   return response.data;
@@ -49,3 +54,16 @@ export const getVolunteer = async (id) => {
   const response = await axios.get(`${apiBaseUrl}/api/volunteers/${id}`);
   return response.data;
 };
+
+export const getCoordinates = async (address) => {
+  try {
+    const response = await axios.get(`${apiBaseUrl}/api/coordinates`, {
+      params: { address },
+    });
+    return response.data;  // הקואורדינטות יגיעו בפורמט { latitude, longitude }
+  } catch (error) {
+    console.error('Error fetching coordinates:', error);
+    throw error;
+  }
+};
+

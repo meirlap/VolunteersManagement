@@ -88,7 +88,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 # Function to get the coordinates (latitude, longitude) for an address using Google Maps API
 def get_coordinates(address):
-    api_key = get_google_api_key()  # Use the function to get the Google API key
+    api_key = "AIzaSyBffHndqs2ubMKRwuTeAMxylltboXd8Gu0"  # Use the function to get the Google API key
     base_url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}'
     response = requests.get(base_url)
     if response.status_code == 200:
@@ -97,7 +97,6 @@ def get_coordinates(address):
             location = data['results'][0]['geometry']['location']
             return location['lat'], location['lng']
     return None, None
-
 # Function to get all distinct volunteer fields
 def get_volunteer_fields():
     all_volunteers = Volunteer.query.with_entities(Volunteer.volunteer_field).all()

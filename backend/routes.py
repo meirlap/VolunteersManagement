@@ -11,6 +11,45 @@ def init_routes(app):
     """Initialize all routes for the Flask app."""
 
     # Routes for volunteers
+    @app.route('/api/volunteers_by_distance', methods=['GET'])
+    def get_volunteers_by_distance():
+        lat = request.args.get('lat', type=float)
+        lon = request.args.get('lon', type=float)
+        max_distance = request.args.get('maxDistance', type=float)
+
+        if not lat or not lon:
+            return jsonify({'error': 'Invalid coordinates'}), 400
+
+        nearby_volunteers = []
+        volunteers = Volunteer.query.all()
+
+        for volunteer in volunteers:
+            if volunteer.latitude and volunteer.longitude:
+                distance = calculate_distance(lat, lon, volunteer.latitude, volunteer.longitude)
+                if distance <= max_distance:
+                    nearby_volunteers.append(volunteer.serialize())  # Assuming serialization method exists
+
+        return jsonify(nearby_volunteers), 200
+
+    @app.route('/api/volunteers_by_address_and_distance', methods=['GET'])
+    def get_volunteers_by_address_and_distance():
+        address = request.args.get('address')
+        max_distance = float(request.args.get('maxDistance'))
+        lat, lon = get_coordinates(address)
+
+        if not lat or not lon:
+            return jsonify({'error': 'Invalid address'}), 400
+
+        nearby_volunteers = []
+        volunteers = Volunteer.query.all()
+
+        for volunteer in volunteers:
+            if volunteer.latitude and volunteer.longitude:
+                distance = calculate_distance(lat, lon, volunteer.latitude, volunteer.longitude)
+                if distance <= max_distance:
+                    nearby_volunteers.append(volunteer.serialize())
+
+        return jsonify(nearby_volunteers), 200
     @app.route('/api/volunteers', methods=['GET'])
     def get_volunteers():
         """Get all volunteers or apply filtering."""
@@ -96,3 +135,4 @@ def init_routes(app):
             return jsonify({'latitude': lat, 'longitude': lng}), 200
         else:
             return jsonify({'error': 'Address not found'}), 404
+

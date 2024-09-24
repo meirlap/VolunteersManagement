@@ -36,18 +36,23 @@ def init_routes(app):
         address = request.args.get('address')
         max_distance = float(request.args.get('maxDistance'))
         lat, lon = get_coordinates(address)
+        print('address',address,max_distance,lat,lon)
+
 
         if not lat or not lon:
             return jsonify({'error': 'Invalid address'}), 400
 
         nearby_volunteers = []
         volunteers = Volunteer.query.all()
-
+        print(volunteers)
         for volunteer in volunteers:
             if volunteer.latitude and volunteer.longitude:
+                print(volunteer.latitude,volunteer.longitude)
                 distance = calculate_distance(lat, lon, volunteer.latitude, volunteer.longitude)
+                print("distance" ,distance)
                 if distance <= max_distance:
                     nearby_volunteers.append(volunteer.serialize())
+                    print("nearby_volunteers",nearby_volunteers)
 
         return jsonify(nearby_volunteers), 200
     @app.route('/api/volunteers', methods=['GET'])

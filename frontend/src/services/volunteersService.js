@@ -18,6 +18,8 @@ export const fetchVolunteersByAddressAndDistance = async (address, maxDistance) 
   });
   return response.data;
 };
+
+
 export const addVolunteer = async (volunteerData) => {
   const response = await axios.post(`${apiBaseUrl}/api/volunteers`, volunteerData);
   return response.data;

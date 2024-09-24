@@ -26,6 +26,28 @@ class Volunteer(db.Model):
     emergency_team = Column(String, nullable=True)
     additional_info = Column(Text, nullable=True)
 
+    def serialize(self):
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "birth_date": self.birth_date,
+            "phone": self.phone,
+            "address": self.address,
+            "id_number": self.id_number,
+            "volunteer_field": self.volunteer_field,
+            "volunteer_organization": self.volunteer_organization,
+            "organization_name": self.organization_name,
+            "neighborhood_only": self.neighborhood_only,
+            "emergency_field": self.emergency_field,
+            "military_reserve": self.military_reserve,
+            "emergency_team": self.emergency_team,
+            "additional_info": self.additional_info,
+            "latitude": self.latitude,
+            "longitude": self.longitude
+        }
+
 # הגדרת הטבלה לניהול צרכים בשכונה
 class Need(db.Model):
     __tablename__ = 'need'

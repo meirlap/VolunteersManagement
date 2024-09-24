@@ -39,54 +39,58 @@ need_columns_mapping = {
 def import_volunteers():
     with app.app_context():
         for index, row in volunteers_df.iterrows():
-            volunteer_data = {
-                db_field: str(row[excel_field]) if pd.notna(row[excel_field]) else None
-                for excel_field, db_field in volunteer_columns_mapping.items()
-            }
+            phone = str(row['נייד']) if pd.notna(row['נייד']) else None
+            volunteer = Volunteer.query.filter_by(phone=phone).first()
 
-            # חישוב קואורדינטות
-            if volunteer_data['address']:
-                lat, lng = get_coordinates(volunteer_data['address'])
-                volunteer_data['latitude'] = lat
-                volunteer_data['longitude'] = lng
+            if not volunteer:
+                volunteer = Volunteer()
+                db.session.add(volunteer)
 
-            volunteer = Volunteer(**volunteer_data)
-            db.session.add(volunteer)
+            for excel_field, db_field in volunteer_columns_mapping.items():
+                value = str(row[excel_field]) if pd.notna(row[excel_field]) else None
+                setattr(volunteer, db_field, value)
 
-        # שמירת השינויים למסד הנתונים
+            if volunteer.address:
+                full_address = volunteer.address + ", ירושלים" if '@' not in volunteer.address and 'ירושלים' not in volunteer.address.lower() else volunteer.address
+                lat, lng = get_coordinates(full_address)
+                volunteer.latitude = lat
+                volunteer.longitude = lng
+
         try:
-            db.session.flush()
             db.session.commit()
-            print("Volunteers committed successfully.")
+            print("Volunteers data imported and committed successfully.")
         except Exception as e:
-            print(f"Commit failed for volunteers: {e}")
+            print(f"Failed to commit volunteer data: {e}")
             db.session.rollback()
+
 
 def import_needs():
     with app.app_context():
         for index, row in needs_df.iterrows():
-            need_data = {
-                db_field: str(row[excel_field]) if pd.notna(row[excel_field]) else None
-                for excel_field, db_field in need_columns_mapping.items()
-            }
+            phone = str(row['נייד']) if pd.notna(row['נייד']) else None
+            need = Need.query.filter_by(phone=phone).first()
 
-            # חישוב קואורדינטות
-            if need_data['address']:
-                lat, lng = get_coordinates(need_data['address'])
-                need_data['latitude'] = lat
-                need_data['longitude'] = lng
+            if not need:
+                need = Need()
+                db.session.add(need)
 
-            need = Need(**need_data)
-            db.session.add(need)
+            for excel_field, db_field in need_columns_mapping.items():
+                value = str(row[excel_field]) if pd.notna(row[excel_field]) else None
+                setattr(need, db_field, value)
 
-        # שמירת השינויים למסד הנתונים
+            if need.address:
+                full_address = need.address + ", ירושלים" if '@' not in need.address and 'ירושלים' not in need.address.lower() else need.address
+                lat, lng = get_coordinates(full_address)
+                need.latitude = lat
+                need.longitude = lng
+
         try:
-            db.session.flush()
             db.session.commit()
-            print("Needs committed successfully.")
+            print("Needs data imported and committed successfully.")
         except Exception as e:
-            print(f"Commit failed for needs: {e}")
+            print(f"Failed to commit needs data: {e}")
             db.session.rollback()
+
 
 # קריאה לפונקציות להוספת הנתונים
 import_volunteers()

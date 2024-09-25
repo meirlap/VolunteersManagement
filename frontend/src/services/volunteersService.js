@@ -68,4 +68,3 @@ export const getCoordinates = async (address) => {
     throw error;
   }
 };
-

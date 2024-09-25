@@ -1,10 +1,39 @@
-from models import db, Volunteer, Need  # ייבוא db מהמודלים
+from models import db, Volunteer, Need,volunteer_columns_mapping  # ייבוא db מהמודלים
 import os
+from io import BytesIO
+import pandas as pd
+
 from sqlalchemy import or_
 import requests
 from math import radians, cos, sin, sqrt, atan2
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
+def process_excel_file(excel_file):
+    """Process an uploaded Excel file directly from memory without saving."""
+    print(excel_file)
+    volunteers_df = pd.read_excel(BytesIO(excel_file.read()))
+    print("done read file")
+    for index, row in volunteers_df.iterrows():
+        phone = str(row['נייד']) if pd.notna(row['נייד']) else None
+        volunteer = Volunteer.query.filter_by(phone=phone).first()
+
+        if not volunteer:
+            volunteer = Volunteer()
+            db.session.add(volunteer)
+
+        # יש להתאים את המיפוי לשמות העמודות המדוייקים ב-DataFrame
+        for excel_field, db_field in volunteer_columns_mapping.items():
+            value = str(row[excel_field]) if pd.notna(row[excel_field]) else None
+            setattr(volunteer, db_field, value)
+
+        # עדכון קואורדינטות אם יש כתובת
+        if volunteer.address:
+            full_address = volunteer.address + ", Jerusalem"
+            lat, lng = get_coordinates(full_address)  # שימוש בפונקציית גאוקודינג שהגדרת
+            volunteer.latitude = lat
+            volunteer.longitude = lng
+
+    db.session.commit()
 # Function to get all volunteers with optional filters
 def get_all_volunteers(name=None, address=None, fields=None):
     query = Volunteer.query
@@ -17,7 +46,7 @@ def get_all_volunteers(name=None, address=None, fields=None):
     if fields and len(fields) > 0:
         query = query.filter(Volunteer.volunteer_field.op('regexp')('|'.join(fields)))
 
-    return [{'id': v.id, 'first_name': v.first_name, 'last_name': v.last_name, 'address': v.address,
+    return [{'id': v.id, 'first_name': v.first_name, 'last_name': v.last_name, 'address': v.address, 'phone': v.phone,
              'volunteer_field': v.volunteer_field} for v in query.all()]
 
 
@@ -82,7 +111,7 @@ from math import radians, cos, sin, sqrt, atan2
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371000  # Radius of the Earth in meters
     dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)  # תיקון כאן
+    dlon = radians(lon2 - lon1)
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
@@ -90,7 +119,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 # Function to get the coordinates (latitude, longitude) for an address using Google Maps API
 def get_coordinates(address):
-    api_key = "AIzaSyBffHndqs2ubMKRwuTeAMxylltboXd8Gu0"  # Use the function to get the Google API key
+    api_key = "AIzaSyBffHndqs2ubMKRwuTeAMxylltboXd8Gu0"
     base_url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}'
     response = requests.get(base_url)
     if response.status_code == 200:
@@ -147,7 +176,7 @@ def update_need(id, data):
         need.longitude = lng
 
     db.session.commit()
-    return {'id': need.id, 'description': need.description, 'address': need.address, 'need_type': need.need_type}
+    return {'id': need.id, 'full_name': need.full_name, 'address': need.address, 'need_type': need.need_type}
 
 # Function to delete a need
 def delete_need(id):
@@ -161,5 +190,5 @@ def delete_need(id):
 def get_need(id):
     need = Need.query.get(id)
     if need:
-        return {'id': need.id, 'description': need.description, 'address': need.address, 'need_type': need.need_type}
+        return {'id': need.id, 'full_name': need.full_name, 'address': need.address, 'need_type': need.need_type}
     return None

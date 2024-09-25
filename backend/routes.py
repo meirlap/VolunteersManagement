@@ -1,15 +1,28 @@
 from flask import request, jsonify
 from models import Volunteer, Need
+from werkzeug.utils import secure_filename
+
 from services import (
     get_all_volunteers, add_volunteer, update_volunteer, delete_volunteer,
     get_volunteer, calculate_distance, get_coordinates, get_volunteer_fields,
-    get_all_needs, add_need, update_need, delete_need, get_need
+    get_all_needs, add_need, update_need, delete_need, get_need, process_excel_file
 )
 
 
 def init_routes(app):
     """Initialize all routes for the Flask app."""
 
+    @app.route('/api/upload_volunteers', methods=['POST'])
+    def upload_volunteers():
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        file = request.files['file']
+        if file and file.filename.endswith(('.xls', '.xlsx')):
+            try:
+                process_excel_file(file)  # מעבד את הקובץ ישירות מהזיכרון
+                return jsonify({'message': 'Data processed successfully'}), 200
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
     # Routes for volunteers
     @app.route('/api/volunteers_by_distance', methods=['GET'])
     def get_volunteers_by_distance():

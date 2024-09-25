@@ -63,3 +63,33 @@ class Need(db.Model):
     special_residents = Column(String, nullable=True)
     additional_needs = Column(Text, nullable=True)
     event_attendance = Column(String, nullable=True)
+
+
+# מיפוי שמות העמודות בקובץ לעמודות ב-DB, בהתאמה מלאה לעמודות שבקבצים
+volunteer_columns_mapping = {
+    'שם פרטי': 'first_name',
+    'שם משפחה': 'last_name',
+    'תאריך לידה': 'birth_date',
+    'נייד': 'phone',
+    'כתובת מגורים': 'address',
+    'תעודת זהות (לצורך ביטוח מתנדבים)': 'id_number',
+    'תחום התנדבות בשגרה': 'volunteer_field',
+    'מתנדב באירגון': 'volunteer_organization',
+    'שם האירגון אליו אני משתייך': 'organization_name',
+    'פועל.ת רק עבור אוכלוסית השכונה': 'neighborhood_only',
+    'בשעת חרום אעדיף לפעול בתחום': 'emergency_field',
+    'מילואים': 'military_reserve',
+    'מוכן.ה להצטרף לצוות מערך החרום בשכונה (צח"ש)': 'emergency_team',
+    'האם תרצו להגיד לנו משהו נוסף לגבי ההתנדבויות': 'additional_info'
+}
+
+need_columns_mapping = {
+    'שם מלא': 'full_name',
+    'כתובת מגורים': 'address',
+    'מספר דירות בבניין': 'apartment_count',
+    'נייד': 'phone',
+    'האם יש לכם קבוצת ווטצאפ בבניין והאם כולם חברים בה?': 'whatsapp_group',
+    'האם יש בבניין דיירים עם המאפיינים הבאים': 'special_residents',
+    'האם יש צורך נוסף שחשוב לך שנדע עליו בשעת חרום': 'additional_needs',
+    'האם תגיע לאירוע ההוקרה לועדי הבתים ב 16.7 ב 19:30 בשלוחת ארנונה': 'event_attendance'
+}

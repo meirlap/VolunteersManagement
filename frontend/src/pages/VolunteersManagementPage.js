@@ -3,17 +3,20 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import axios from 'axios';
 import { fetchVolunteers, deleteVolunteer } from '../services/volunteersService';
 import { useNavigate } from 'react-router-dom';
+import { apiBaseUrl } from '../utils/config';
 
 const VolunteersManagementPage = () => {
     const [volunteers, setVolunteers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
+    // פונקציית fetchData כעת מוגדרת ברמה של הקומפוננטה כולה
+    const fetchData = async () => {
+        const result = await fetchVolunteers();
+        setVolunteers(result);
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            const result = await fetchVolunteers();
-            setVolunteers(result);
-        };
         fetchData();
     }, []);
 
@@ -26,7 +29,7 @@ const VolunteersManagementPage = () => {
         const formData = new FormData();
         formData.append('file', file);
 
-        axios.post('http://localhost:5000/api/upload_volunteers', formData, {
+        axios.post(`${apiBaseUrl}/api/upload_volunteers`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -69,8 +72,8 @@ const VolunteersManagementPage = () => {
                             <TableRow key={volunteer.id}>
                                 <TableCell>{volunteer.first_name}</TableCell>
                                 <TableCell>{volunteer.last_name}</TableCell>
-                                <TableCell>{volunteer.phone}</TableCell
-                                ><TableCell>{volunteer.address}</TableCell>
+                                <TableCell>{volunteer.phone}</TableCell>
+                                <TableCell>{volunteer.address}</TableCell>
                                 <TableCell>
                                     <Button color="primary" onClick={() => navigate(`/edit-volunteer/${volunteer.id}`)}>
                                         Edit

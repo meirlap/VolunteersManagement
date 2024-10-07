@@ -11,7 +11,6 @@ const VolunteersPage = () => {
     const [address, setAddress] = useState('');
     const [maxDistance, setMaxDistance] = useState('');
 
-    // טוען את רשימת התחומים והמתנדבים מהשרת
     useEffect(() => {
         const loadFields = async () => {
             const fieldsData = await fetchVolunteerFields();
@@ -28,23 +27,19 @@ const VolunteersPage = () => {
         loadVolunteers();
     }, []);
 
-    // מרענן את הרשימה כשיש שינוי במסננים
     useEffect(() => {
         handleFilter();
     }, [searchTerm, selectedFields, address, maxDistance]);
 
-    // פונקציה לסינון המתנדבים
     const handleFilter = async () => {
         let currentVolunteers = [...volunteers];
 
-        // סינון לפי שם ותחום התנדבות
         currentVolunteers = currentVolunteers.filter(volunteer => {
             const nameMatch = volunteer.first_name.toLowerCase().includes(searchTerm.toLowerCase()) || volunteer.last_name.toLowerCase().includes(searchTerm.toLowerCase());
             const fieldMatch = selectedFields.length === 0 || selectedFields.some(field => volunteer.volunteer_field.includes(field));
             return nameMatch && fieldMatch;
         });
 
-        // סינון לפי כתובת ומרחק מקסימלי
         if (address && maxDistance) {
             try {
                 const volunteersByDistance = await fetchVolunteersByAddressAndDistance(address, maxDistance);
@@ -52,75 +47,83 @@ const VolunteersPage = () => {
                     currentVolunteers.some(v => v.id === volunteer.id)
                 );
             } catch (error) {
-                console.error('Error fetching volunteers by distance:', error);
+                console.error('שגיאה בטעינת מתנדבים לפי מרחק:', error);
             }
         }
 
         setFilteredVolunteers(currentVolunteers);
     };
 
-    // פונקציה לניקוי המסננים
     const resetFilters = () => {
         setSearchTerm('');
         setSelectedFields([]);
         setAddress('');
         setMaxDistance('');
-        setFilteredVolunteers(volunteers);  // מחזיר את הרשימה המלאה
+        setFilteredVolunteers(volunteers);
     };
 
     return (
-        <Box sx={{ p: 3 }}>
-            <TextField label="חפש לפי שם" variant="outlined" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} sx={{ mb: 2 }} />
-            <FormControl sx={{ mb: 3, minWidth: 200 }}>
-                <InputLabel>סנן מתנדבים לפי תחום</InputLabel>
-                <Select
-                    multiple
-                    value={selectedFields}
-                    onChange={e => setSelectedFields(e.target.value)}
-                    renderValue={selected => selected.join(', ')}
-                >
-                    {fields.map(field => (
-                        <MenuItem key={field} value={field}>
-                            <Checkbox checked={selectedFields.includes(field)} />
-                            <ListItemText primary={field} />
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+        <Box sx={{ p: 3, backgroundColor: '#f5f5f5' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+                <TextField 
+                    label="חיפוש לפי שם" 
+                    variant="outlined" 
+                    value={searchTerm} 
+                    onChange={e => setSearchTerm(e.target.value)} 
+                    sx={{ flexGrow: 1, minWidth: '200px' }}
+                />
+                <FormControl sx={{ flexGrow: 1, minWidth: '200px' }}>
+                    <InputLabel>סינון לפי תחום התנדבות</InputLabel>
+                    <Select
+                        multiple
+                        value={selectedFields}
+                        onChange={e => setSelectedFields(e.target.value)}
+                        renderValue={selected => selected.join(', ')}
+                    >
+                        {fields.map(field => (
+                            <MenuItem key={field} value={field}>
+                                <Checkbox checked={selectedFields.includes(field)} />
+                                <ListItemText primary={field} />
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <TextField
+                    label="כתובת לחישוב מרחק"
+                    variant="outlined"
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    sx={{ flexGrow: 1, minWidth: '200px' }}
+                />
+                <TextField
+                    label="מרחק מקסימלי (מטרים)"
+                    variant="outlined"
+                    type="number"
+                    value={maxDistance}
+                    onChange={e => setMaxDistance(e.target.value)}
+                    sx={{ flexGrow: 1, minWidth: '200px' }}
+                />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <Button variant="contained" onClick={handleFilter} sx={{ flexGrow: 1 }}>סינון</Button>
+                <Button variant="outlined" onClick={resetFilters} sx={{ flexGrow: 1 }}>איפוס מסננים</Button>
+            </Box>
 
-            {/* מסנן כתובת ומרחק */}
-            <TextField
-                label="כתובת לחישוב מרחק"
-                variant="outlined"
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                sx={{ mb: 2 }}
-            />
-            <TextField
-                label="מרחק מקסימלי (מטרים)"
-                variant="outlined"
-                value={maxDistance}
-                onChange={e => setMaxDistance(e.target.value)}
-                sx={{ mb: 2 }}
-            />
-
-            <Button variant="contained" onClick={handleFilter} sx={{ mr: 2 }}>סנן</Button>
-            <Button variant="outlined" onClick={resetFilters}>נקה מסננים</Button>
-
-            <TableContainer component={Paper} sx={{ mt: 3 }}>
+            <TableContainer component={Paper} sx={{ mt: 3, boxShadow: 3 }}>
                 <Table>
                     <TableHead>
-                        <TableRow>
-                            <TableCell>First Name</TableCell>
-                            <TableCell>Last Name</TableCell>
-                            <TableCell>Phone</TableCell
-                            ><TableCell>Address</TableCell>
-                            <TableCell>Volunteer Field</TableCell>
+                        <TableRow sx={{ backgroundColor: '#e0e0e0' }}>
+                            <TableCell>שם פרטי</TableCell>
+                            <TableCell>שם משפחה</TableCell>
+                            <TableCell>טלפון</TableCell>
+                            <TableCell>כתובת</TableCell>
+                            <TableCell>תחום התנדבות</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredVolunteers.map(volunteer => (
-                            <TableRow key={volunteer.id}>
+                            <TableRow key={volunteer.id} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
                                 <TableCell>{volunteer.first_name}</TableCell>
                                 <TableCell>{volunteer.last_name}</TableCell>
                                 <TableCell>{volunteer.phone}</TableCell>
@@ -134,6 +137,5 @@ const VolunteersPage = () => {
         </Box>
     );
 };
-
 
 export default VolunteersPage;

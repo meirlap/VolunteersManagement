@@ -139,8 +139,10 @@ def get_volunteer_fields():
 
 # Function to get all needs
 def get_all_needs():
+    print("get all needs")
     needs = Need.query.all()
-    return [{'id': n.id, 'description': n.description, 'address': n.address, 'type': n.need_type} for n in needs]
+    print("needs",needs)
+    return [{'id': n.id, 'full_name': n.full_name, 'address': n.address, 'additional_needs': n.additional_needs} for n in needs]
 
 # Function to add a new need
 def add_need(data):
